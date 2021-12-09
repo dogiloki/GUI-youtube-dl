@@ -6,21 +6,36 @@ class DB:
     def main(self):
         connection=sqlite3.connect('database.db')
         rs=connection.cursor()
-        rs.execute("CREATE TABLE IF NOT EXISTS config(ruta_destino TEXT NOT NULL)")
+        rs.execute("CREATE TABLE IF NOT EXISTS config(storage TEXT NOT NULL)")
         rs.execute("CREATE TABLE IF NOT EXISTS videos(id int(10) NOT NULL,"+
                                                 "url TEXT NOT NULL,"+
                                                 "title TEXT NOT NULL,"+
                                                 "duration TEXT NOT NULL,"+
-                                                "espacio TEXT NOT NULL,"+
-                                                "canal TEXT NOT NULL,"+
+                                                "size TEXT NOT NULL,"+
+                                                "channel TEXT NOT NULL,"+
                                                 "format_id TEXT NOT NULL,"+
-                                                "destino TEXT NOT NULL)")
+                                                "storage TEXT NOT NULL,"+
+                                                "filename TEXT NOT NULL)")
+        connection.cursor().execute("INSERT INTO config VALUES ('')")
         connection.commit()
         return connection
 
-    def addVideo(self,connection,url,title,duration,espacio,canal,format_id,destino):
-        sql="INSERT INTO videos VALUES ("+str(DB().getId(connection))+",'"+url+"','"+title+"','"+duration+"','"+espacio+"','"+canal+"','"+format_id+"','"+destino+"')"
+    def changeStorage(self,connection,path):
+        connection.cursor().execute("UPDATE config SET storage='"+str(path)+"'")
+        connection.commit()
+
+    def getStorage(self,connection):
+        for fila in connection.cursor().execute("SELECT * FROM config"):
+            return fila[0]
+        return ""
+
+    def addVideo(self,connection,url,title,duration,size,channel,format_id,storage):
+        sql="INSERT INTO videos VALUES ("+str(DB().getId(connection))+",'"+url+"','"+title+"','"+duration+"','"+size+"','"+channel+"','"+format_id+"','"+storage+"','')"
         connection.cursor().execute(sql)
+        connection.commit()
+
+    def changeVideo(self,connection,id,filename):
+        connection.cursor().execute("UPDATE videos SET filename='"+str(filename)+"' WHERE id='"+str(id)+"'")
         connection.commit()
 
     def getId(self,connection):
@@ -32,7 +47,7 @@ class DB:
     def getVideos(self,connection):
         filas={}
         conta=0
-        for fila in connection.cursor().execute("SELECT * FROM videos ORDER BY id DESC"):
+        for fila in connection.cursor().execute("SELECT * FROM videos ORDER BY id ASC"):
             filas[conta]=fila
             conta=conta+1
         return filas

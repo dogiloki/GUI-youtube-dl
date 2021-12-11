@@ -30,8 +30,12 @@ class Gui(Frame):
     def search(self):
         self.limiparBusqueda()
         self.btn_search['state']="disabled"
-        dl_opts={}
+        dl_opts={
+            'format':'249',
+            'ignoreerrors':True
+        }
         with YoutubeDL(dl_opts) as ydl:
+            print(ydl)
             features=[]
             try:
                 features=ydl.extract_info(self.caja_url.get(),download=False)
@@ -122,9 +126,25 @@ class Gui(Frame):
             selection_format=self.caja_formats.current()
             format_id=self.list_formats[selection_format][0]
             self.text_size.config(text=self.list_formats[selection_format][7])
-            DB().addVideo(self.connection,self.caja_url.get(),self.text_title["text"],self.text_duration["text"],self.text_size["text"],self.text_channel["text"],format_id,self.caja_storage.get())
+            DB().addVideo(self.connection,self.caja_url.get(),self.text_title["text"]+"_"+str(format_id),self.text_duration["text"],self.text_size["text"],self.text_channel["text"],format_id,self.caja_storage.get())
         btn['state']="normal"
         self.getVideos()
+
+    # Eliminar video
+    def deleteVideo(self):
+        try:
+            self.fila_sele=self.tb.selection()[0]
+            if self.list_videos[int(self.fila_sele[1:])-1]['stop']==False:
+                messagebox.showinfo(message="Detenga / pause el video",title="Error")
+                return
+            fila=int(self.fila_sele[1:])-1
+            if DB().deleteVideo(self.connection,self.list_videos[fila]['id'])==False:
+                messagebox.showinfo(message="Error al eliminar video o ya ha sido eliminado",title="Error")
+            else:
+                messagebox.showinfo(message="Video eleminado\n\nLos cambios se verán al reiniciar el programa",title="Advertencia")
+        except:
+            messagebox.showinfo(message="Seleccione un video",title="Advertencia")
+        self.tb.config(self.fila_sele,"",END,tag=('fuente','BLACK'))
 
     def limiparBusqueda(self):
         self.text_url.config(text="")
@@ -134,15 +154,6 @@ class Gui(Frame):
         self.text_channel.config(text="")
         self.caja_formats['values']=[]
         self.list_formats=[]
-
-    def getInfoVideos(self,url,id_format,fila):
-        dl_opts={
-           'format':str(id_format)
-        }
-        with YoutubeDL(dl_opts) as ydl:
-            features=ydl.extract_info(url,download=False)
-            self.tb.identify_row(fila)
-            self.tb.item(self.tb.focus(),values=(features['title']))
 
     # Obtener videos
     def getVideos(self):
@@ -181,12 +192,11 @@ class Gui(Frame):
                 })
                 print(self.list_videos[fila]['filename'])
             self.tb.insert("",fila,text=data[fila][5],values=(data[fila][2],data[fila][3],data[fila][4],"-","-","-","-"))
-            #Thread(target=lambda:self.getInfoVideos(data[fila][1],data[fila][6],fila)).start()
     
     # Selecionar video
     def seleVideo(self):
-        #messagebox.showinfo(message="Seleccione un lugar de almacenamiento",title="Advertencia")
         try:
+            #messagebox.showinfo(message="Seleccione un lugar de almacenamiento",title="Advertencia")
             #video_format_id=self.tb.item(self.tb.selection())['text']
             self.fila_sele=self.tb.selection()[0]
             fila=int(self.fila_sele[1:])-1
@@ -196,8 +206,6 @@ class Gui(Frame):
             if self.list_videos[int(self.fila_sele[1:])-1]['stop']==True:
                 Thread(target=self.download,args=[video_url,video_format_id,video_storage,self.fila_sele],daemon=True).start()
                 self.list_videos[int(self.fila_sele[1:])-1]['stop']=False
-            else:
-                self.tb.set(fila_sele,"#7",value="Finalizado")
         except:
             messagebox.showinfo(message="Seleccione un video",title="Advertencia")
 
@@ -223,7 +231,7 @@ class Gui(Frame):
         if video_format_id!=-1:
             dl_opts={
                 'format':str(video_format_id),
-                'outtmpl':str(video_storage)+"/%(title)s.%(ext)s",
+                'outtmpl':str(video_storage)+"/%(title)s_"+str(video_format_id)+".%(ext)s",
                 'logger':MyLogger(),
                 'progress_hooks':[my_hook],
                 'ignoreerrors':True
@@ -234,9 +242,11 @@ class Gui(Frame):
                 ydl.download([str(video_url)])
 
     def stopDownload(self):
-        self.fila_sele=self.tb.selection()[0]
-        if self.list_videos[int(self.fila_sele[1:])-1]['stop']==False:
+        try:
+            self.fila_sele=self.tb.selection()[0]
             self.list_videos[int(self.fila_sele[1:])-1]['stop']=True
+        except:
+            messagebox.showinfo(message="Seleccione un video",title="Advertencia")
 
     def my_hook_temp(self,rs):
         Thread(target=self.my_hook,args=[rs,self.fila_sele]).start()
@@ -266,43 +276,43 @@ class Gui(Frame):
         # Url
         Label(self,text="URL: ",font=("arial",10)).grid(row=2,column=0,sticky="w",padx=5,pady=5)
         self.text_url=Label(self,text="",font=("arial",10))
-        self.text_url.grid(row=2,column=1,columnspan=2,sticky="w")
+        self.text_url.grid(row=2,column=1,columnspan=4,sticky="w")
 
         # Título
         Label(self,text="Título: ",font=("arial",10)).grid(row=3,column=0,sticky="w",padx=5,pady=5)
         self.text_title=Label(self,text="",font=("arial",10))
-        self.text_title.grid(row=3,column=1,columnspan=2,sticky="w")
+        self.text_title.grid(row=3,column=1,columnspan=4,sticky="w")
 
         # Duración
         Label(self,text="Duración: ",font=("arial",10)).grid(row=4,column=0,sticky="w",padx=5,pady=5)
         self.text_duration=Label(self,text="",font=("arial",10))
-        self.text_duration.grid(row=4,column=1,columnspan=2,sticky="w")
+        self.text_duration.grid(row=4,column=1,columnspan=4,sticky="w")
 
         # Espacio
         Label(self,text="Espacio: ",font=("arial",10)).grid(row=5,column=0,sticky="w",padx=5,pady=5)
         self.text_size=Label(self,text="",font=("arial",10))
-        self.text_size.grid(row=5,column=1,columnspan=2,sticky="w")
+        self.text_size.grid(row=5,column=1,columnspan=4,sticky="w")
 
         # Canal
         Label(self,text="Canal: ",font=("arial",10)).grid(row=6,column=0,sticky="w",padx=5,pady=5)
         self.text_channel=Label(self,text="",font=("arial",10))
-        self.text_channel.grid(row=6,column=1,columnspan=2,sticky="w")
+        self.text_channel.grid(row=6,column=1,columnspan=4,sticky="w")
 
         # Opciones de descarga
         self.caja_formats=ttk.Combobox(self,width=60,font=("arial",10),state="readonly")
         self.caja_formats.grid(row=7,column=0,columnspan=2,sticky="w",padx=5,pady=5)
         btn_add_video=Button(self,text="Agregar",font=("arial",10),command=lambda:Thread(self.add(btn_add_video)))
         btn_add_video.grid(row=7,column=2,sticky="w",padx=5,pady=5)
-        btn_add_video_best=Button(self,text="Mejor video",font=("arial",10),command=lambda:Thread(self.add(btn_add_video_best)))
+        btn_add_video_best=Button(self,text="Mejor (sólo video)",font=("arial",10),command=lambda:Thread(self.add(btn_add_video_best)))
         btn_add_video_best.grid(row=7,column=3,sticky="w",padx=5,pady=5)
-        btn_add_audio_best=Button(self,text="Mejor audio",font=("arial",10),command=lambda:Thread(self.add(btn_add_audio_best)))
+        btn_add_audio_best=Button(self,text="Mejor (sólo audio)",font=("arial",10),command=lambda:Thread(self.add(btn_add_audio_best)))
         btn_add_audio_best.grid(row=7,column=4,sticky="w",padx=5,pady=5)
-        btn_add_video_audio_best=Button(self,text="Mejor video con audio",font=("arial",10),command=lambda:Thread(self.add(btn_add_video_audio_best)))
+        btn_add_video_audio_best=Button(self,text="Mejor (video y audio)",font=("arial",10),command=lambda:Thread(self.add(btn_add_video_audio_best)))
         btn_add_video_audio_best.grid(row=7,column=5,sticky="w",padx=5,pady=5)
 
         # Descargar propiedades y tabla
         self.tb=ttk.Treeview(self,columns=("#1","#2","#3","#4","#5","#6","#7"))
-        self.tb.grid(row=8,column=0,columnspan=6,padx=5,pady=5,sticky="w")
+        self.tb.grid(row=8,column=0,columnspan=8,padx=5,pady=5,sticky="w")
         self.tb.column("#0",width=150)
         self.tb.column("#1",width=500)
         self.tb.column("#2",width=70)
@@ -319,12 +329,14 @@ class Gui(Frame):
         self.tb.heading("#5",text="Velocidad")
         self.tb.heading("#6",text="Tiempo")
         self.tb.heading("#7",text="Estado")
-        self.btn_properties=Button(self,text="Carpeta de destino",font=("arial",10),command=lambda:Thread(target=propertiesVideo).start())
+        self.btn_properties=Button(self,text="Propiedades",font=("arial",10),command=lambda:Thread(target=propertiesVideo).start())
         self.btn_properties.grid(row=9,column=0,padx=5,pady=5,sticky="w")
+        self.btn_delete=Button(self,text="Eliminar",font=("arial",10),command=self.deleteVideo)
+        self.btn_delete.grid(row=9,column=4,padx=5,pady=5,sticky="e")
         self.btn_download_stop=Button(self,text="Detener / Pausar",font=("arial",10),command=self.stopDownload)
-        self.btn_download_stop.grid(row=9,column=4,padx=5,pady=5,sticky="e")
+        self.btn_download_stop.grid(row=9,column=5,padx=5,pady=5,sticky="e")
         self.btn_download=Button(self,text="Descargar",font=("arial",10),command=self.seleVideo)
-        self.btn_download.grid(row=9,column=5,padx=5,pady=5,sticky="e")
+        self.btn_download.grid(row=9,column=6,padx=5,pady=5,sticky="e")
 
     # Variables
     caja_url=None
@@ -339,11 +351,11 @@ class Gui(Frame):
     caja_formats=None
     tb=None
     btn_properties=None
+    btn_delete=None
     btn_download=None
     btn_download_stop=None
     list_formats=[]
     list_videos=[]
-    list_videos_stop={}
     fila_sele=None
     connection=DB().main()
 

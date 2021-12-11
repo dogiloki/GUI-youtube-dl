@@ -30,9 +30,15 @@ class DB:
         return ""
 
     def addVideo(self,connection,url,title,duration,size,channel,format_id,storage):
-        sql="INSERT INTO videos VALUES ("+str(DB().getId(connection))+",'"+url+"','"+title+"','"+duration+"','"+size+"','"+channel+"','"+format_id+"','"+storage+"','')"
-        connection.cursor().execute(sql)
+        connection.cursor().execute("INSERT INTO videos VALUES ("+str(DB().getId(connection))+",'"+url+"','"+title+"','"+duration+"','"+size+"','"+channel+"','"+format_id+"','"+storage+"','')")
         connection.commit()
+
+    def deleteVideo(self,connection,id):
+        for fila in connection.cursor().execute("SELECT * FROM videos WHERE id='"+str(id)+"'"):
+            connection.cursor().execute("DELETE FROM videos WHERE id='"+str(id)+"'")
+            connection.commit()
+            return True
+        return False
 
     def changeVideo(self,connection,id,filename):
         connection.cursor().execute("UPDATE videos SET filename='"+str(filename)+"' WHERE id='"+str(id)+"'")

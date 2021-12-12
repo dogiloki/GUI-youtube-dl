@@ -83,6 +83,10 @@ class Gui(Frame):
                     else:
                         acodec="Audio"
                 except: acodec=""
+                tbr=""
+                try:
+                    tbr=str(f['tbr'])+"k"
+                except: tbr=""
                 width=""
                 try:
                     width=f['width']
@@ -107,6 +111,7 @@ class Gui(Frame):
                 sublist.append(ext)
                 sublist.append(vcodec)
                 sublist.append(acodec)
+                sublist.append(tbr)
                 sublist.append(str(width)+"x"+str(height))
                 sublist.append(format_note)
                 sublist.append(str(fps)+"fps")
@@ -125,7 +130,7 @@ class Gui(Frame):
         if self.caja_formats.current()>=0 and self.caja_storage.get()!="":
             selection_format=self.caja_formats.current()
             format_id=self.list_formats[selection_format][0]
-            self.text_size.config(text=self.list_formats[selection_format][7])
+            self.text_size.config(text=self.list_formats[selection_format][8])
             DB().addVideo(self.connection,self.caja_url.get(),self.text_title["text"]+"_"+str(format_id),self.text_duration["text"],self.text_size["text"],self.text_channel["text"],format_id,self.caja_storage.get())
         btn['state']="normal"
         self.getVideos()
@@ -337,6 +342,10 @@ class Gui(Frame):
         self.btn_download_stop.grid(row=9,column=5,padx=5,pady=5,sticky="e")
         self.btn_download=Button(self,text="Descargar",font=("arial",10),command=self.seleVideo)
         self.btn_download.grid(row=9,column=6,padx=5,pady=5,sticky="e")
+
+        btn_add_video_best['state']="disabled"
+        btn_add_audio_best['state']="disabled"
+        btn_add_video_audio_best['state']="disabled"
 
     # Variables
     caja_url=None

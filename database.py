@@ -4,7 +4,7 @@ class DB:
 
     #Base de datos
     def main(self):
-        connection=sqlite3.connect('database.db')
+        connection=sqlite3.connect('database.db',check_same_thread=False)
         rs=connection.cursor()
         rs.execute("CREATE TABLE IF NOT EXISTS config(storage TEXT NOT NULL)")
         rs.execute("CREATE TABLE IF NOT EXISTS videos(id int(10) NOT NULL,"+
@@ -15,7 +15,8 @@ class DB:
                                                 "channel TEXT NOT NULL,"+
                                                 "format_id TEXT NOT NULL,"+
                                                 "storage TEXT NOT NULL,"+
-                                                "filename TEXT NOT NULL)")
+                                                "filename TEXT NOT NULL,"+
+                                                "data_register VARCHAR(50) NOT NULL)")
         connection.cursor().execute("INSERT INTO config VALUES ('')")
         connection.commit()
         return connection
@@ -30,7 +31,7 @@ class DB:
         return ""
 
     def addVideo(self,connection,url,title,duration,size,channel,format_id,storage):
-        connection.cursor().execute("INSERT INTO videos VALUES ("+str(DB().getId(connection))+",'"+url+"','"+title+"','"+duration+"','"+size+"','"+channel+"','"+format_id+"','"+storage+"','')")
+        connection.cursor().execute("INSERT INTO videos VALUES ("+str(DB().getId(connection))+",'"+url+"','"+title+"','"+duration+"','"+size+"','"+channel+"','"+format_id+"','"+storage+"','',strftime('%Y/%m/%d %H:%M:%f','now'))")
         connection.commit()
 
     def deleteVideo(self,connection,id):

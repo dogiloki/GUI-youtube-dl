@@ -15,7 +15,7 @@ class Gui(Frame):
         self.pack()
         self.widgets()
         self.caja_storage.insert(0,DB().getStorage(self.connection))
-        self.getVideos()
+        Thread(target=self.getVideos()).start()
 
     # Cambiar ruta de almacenamiento
     def examinar(self):
@@ -28,14 +28,17 @@ class Gui(Frame):
 
     # Buscar video
     def search(self):
+        if self.caja_url.get()=="":
+            messagebox.showinfo(message="URL no válida",title="Advertencia")
+            return
         self.limiparBusqueda()
         self.btn_search['state']="disabled"
+        self.btn_add['state']="disabled"
         dl_opts={
             'format':'249',
             'ignoreerrors':True
         }
         with YoutubeDL(dl_opts) as ydl:
-            print(ydl)
             features=[]
             try:
                 features=ydl.extract_info(self.caja_url.get(),download=False)
@@ -60,6 +63,7 @@ class Gui(Frame):
             self.text_duration.config(text=str(int(duration/60))+":"+str(duration%60))
             self.text_channel.config(text=channel)
             for f in features['formats']:
+                #print("\n\n"+str(f))
                 sublist=[]
                 format_id=""
                 try:
@@ -119,12 +123,13 @@ class Gui(Frame):
                 self.list_formats.append(sublist)
         self.caja_formats['values']=self.list_formats
         self.btn_search['state']="normal"
+        self.btn_add['state']="normal"
 
     # Agregar video
     def add(self,btn):
         if self.caja_storage.get()=='':
-             messagebox.showinfo(message="Seleccione un lugar de almacenamiento",title="Advertencia")
-             return 0
+            messagebox.showinfo(message="Seleccione un lugar de almacenamiento",title="Advertencia")
+            return 0
         btn['state']="disabled"
         format_id=""
         if self.caja_formats.current()>=0 and self.caja_storage.get()!="":
@@ -146,10 +151,11 @@ class Gui(Frame):
             if DB().deleteVideo(self.connection,self.list_videos[fila]['id'])==False:
                 messagebox.showinfo(message="Error al eliminar video o ya ha sido eliminado",title="Error")
             else:
+                self.tb.set(self.fila_sele,"#7",value="Eliminado")
                 messagebox.showinfo(message="Video eleminado\n\nLos cambios se verán al reiniciar el programa",title="Advertencia")
         except:
             messagebox.showinfo(message="Seleccione un video",title="Advertencia")
-        self.tb.config(self.fila_sele,"",END,tag=('fuente','BLACK'))
+        #self.tb.config(self.fila_sele,"",END,tag=('fuente','BLACK'))
 
     def limiparBusqueda(self):
         self.text_url.config(text="")
@@ -178,8 +184,15 @@ class Gui(Frame):
                     'filename':data[fila][8],
                     'stop':True
                 })
-                print(self.list_videos[fila]['filename'])
-                self.tb.insert("",fila,text=data[fila][5],values=(data[fila][2],data[fila][3],data[fila][4],"-","-","-","-"))
+                status=""
+                try:
+                    with open(self.list_videos[fila]['filename'],'r') as f:
+                        status="Finalizado"
+                except FileNotFoundError as ex:
+                    status="Pendiente"
+                except IOError as ex:
+                    status="Pendiente"
+                self.tb.insert("",fila,text=data[fila][5],values=(data[fila][2],data[fila][3],data[fila][4],"-","-","-",status))
         else:
             fila=len(self.list_videos)
             if len(data)>=1:
@@ -195,8 +208,15 @@ class Gui(Frame):
                     'filename':data[fila][8],
                     'stop':True
                 })
-                print(self.list_videos[fila]['filename'])
-            self.tb.insert("",fila,text=data[fila][5],values=(data[fila][2],data[fila][3],data[fila][4],"-","-","-","-"))
+                status=""
+                try:
+                    with open(self.list_videos[fila]['filename'],'r') as f:
+                        status="Finalizado"
+                except FileNotFoundError as ex:
+                    status="Pendiente"
+                except IOError as ex:
+                    status="Pendiente"
+            self.tb.insert("",fila,text=data[fila][5],values=(data[fila][2],data[fila][3],data[fila][4],"-","-","-",status))
     
     # Selecionar video
     def seleVideo(self):
@@ -210,12 +230,12 @@ class Gui(Frame):
             video_storage=self.list_videos[fila]['storage']
             if self.list_videos[int(self.fila_sele[1:])-1]['stop']==True:
                 Thread(target=self.download,args=[video_url,video_format_id,video_storage,self.fila_sele],daemon=True).start()
-                self.list_videos[int(self.fila_sele[1:])-1]['stop']=False
         except:
             messagebox.showinfo(message="Seleccione un video",title="Advertencia")
 
     # Descargar video
     def download(self,video_url,video_format_id,video_storage,fila_sele):
+        self.list_videos[int(fila_sele[1:])-1]['stop']=False
         def my_hook(rs):
             fila=int(fila_sele[1:])-1
             if self.list_videos[fila]['stop']==True:
@@ -232,7 +252,9 @@ class Gui(Frame):
             if rs['status']=='finished':
                 self.tb.set(fila_sele,"#7",value="Finalizado")
                 self.list_videos[fila]['stop']=True
-            #print("\n-------\n"+str(rs)+"\n---------\n")
+                self.list_videos[fila]['filename']=rs['filename']
+                DB().changeVideo(self.connection,self.list_videos[fila]['id'],self.list_videos[fila]['filename'])
+            #print("\n\n"+str(rs))
         if video_format_id!=-1:
             dl_opts={
                 'format':str(video_format_id),
@@ -241,9 +263,9 @@ class Gui(Frame):
                 'progress_hooks':[my_hook],
                 'ignoreerrors':True
             }
-            self.tb.set(self.fila_sele,"#7",value="Iniciando")
             with YoutubeDL(dl_opts) as ydl:
                 #self.btn_download['state']="disabled"
+                self.tb.set(fila_sele,"#7",value="Iniciando")
                 ydl.download([str(video_url)])
 
     def stopDownload(self):
@@ -306,8 +328,8 @@ class Gui(Frame):
         # Opciones de descarga
         self.caja_formats=ttk.Combobox(self,width=60,font=("arial",10),state="readonly")
         self.caja_formats.grid(row=7,column=0,columnspan=2,sticky="w",padx=5,pady=5)
-        btn_add_video=Button(self,text="Agregar",font=("arial",10),command=lambda:Thread(self.add(btn_add_video)))
-        btn_add_video.grid(row=7,column=2,sticky="w",padx=5,pady=5)
+        self.btn_add=Button(self,text="Agregar",font=("arial",10),command=lambda:Thread(target=self.add(self.btn_add)).start())
+        self.btn_add.grid(row=7,column=2,sticky="w",padx=5,pady=5)
         btn_add_video_best=Button(self,text="Mejor (sólo video)",font=("arial",10),command=lambda:Thread(self.add(btn_add_video_best)))
         btn_add_video_best.grid(row=7,column=3,sticky="w",padx=5,pady=5)
         btn_add_audio_best=Button(self,text="Mejor (sólo audio)",font=("arial",10),command=lambda:Thread(self.add(btn_add_audio_best)))
@@ -357,6 +379,7 @@ class Gui(Frame):
     text_duration=None
     text_size=None
     text_channel=None
+    btn_add=None
     caja_formats=None
     tb=None
     btn_properties=None

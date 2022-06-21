@@ -28,99 +28,104 @@ class Gui(Frame):
 
     # Buscar video
     def search(self):
-        if self.caja_url.get()=="":
-            messagebox.showinfo(message="URL no válida",title="Advertencia")
-            return
-        self.limiparBusqueda()
-        self.btn_search['state']="disabled"
-        self.btn_add['state']="disabled"
-        dl_opts={
-            'format':'249',
-            'ignoreerrors':True
-        }
-        with YoutubeDL(dl_opts) as ydl:
-            features=[]
-            try:
-                features=ydl.extract_info(self.caja_url.get(),download=False)
-            except:
+        try:
+            if self.caja_url.get()=="" or self.caja_url.get().find("&")!=-1:
                 messagebox.showinfo(message="URL no válida",title="Advertencia")
-                self.btn_search['state']="normal"
                 return
-            title=""
-            try:
-                title=features['title']
-            except: title=""
-            duration=0
-            try:
-                duration=int(features['duration'])
-            except: duration=0
-            channel=""
-            try:
-                channel=features['channel']
-            except: channel=""
-            self.text_url.config(text=self.caja_url.get())
-            self.text_title.config(text=title)
-            self.text_duration.config(text=str(int(duration/60))+":"+str(duration%60))
-            self.text_channel.config(text=channel)
-            for f in features['formats']:
-                #print("\n\n"+str(f))
-                sublist=[]
-                format_id=""
+            self.limiparBusqueda()
+            self.btn_search['state']="disabled"
+            self.btn_add['state']="disabled"
+            dl_opts={
+                'format':'249',
+                'ignoreerrors':True
+            }
+            with YoutubeDL(dl_opts) as ydl:
+                features=[]
                 try:
-                    format_id=f['format_id']
-                except: format_id=""
-                ext=""
+                    features=ydl.extract_info(self.caja_url.get(),download=False)
+                except:
+                    messagebox.showinfo(message="URL no válida",title="Advertencia")
+                    self.btn_search['state']="normal"
+                    return
+                title=""
                 try:
-                    ext=f['ext']
-                except: ext=""
-                vcodec=""
+                    title=features['title']
+                except: title=""
+                duration=0
                 try:
-                    if f['vcodec']=="none":
-                        vcodec="none"
-                    else:
-                        vcodec="Video"
-                except: vcodec=""
-                acodec=""
+                    duration=int(features['duration'])
+                except: duration=0
+                channel=""
                 try:
-                    if f['acodec']=="none":
-                        acodec="none"
-                    else:
-                        acodec="Audio"
-                except: acodec=""
-                tbr=""
-                try:
-                    tbr=str(f['tbr'])+"k"
-                except: tbr=""
-                width=""
-                try:
-                    width=f['width']
-                except: width=""
-                height=""
-                try:
-                    height=f['height']
-                except: height=""
-                format_note=""
-                try:
-                    format_note=f['format_note']
-                except: format_note=""
-                fps=""
-                try:
-                    fps=f['fps']
-                except: fps=""
-                filesize=""
-                try:
-                    filesize=self.formatSize(f['filesize'])
-                except: filesize=""
-                sublist.append(format_id)
-                sublist.append(ext)
-                sublist.append(vcodec)
-                sublist.append(acodec)
-                sublist.append(tbr)
-                sublist.append(str(width)+"x"+str(height))
-                sublist.append(format_note)
-                sublist.append(str(fps)+"fps")
-                sublist.append(filesize)
-                self.list_formats.append(sublist)
+                    channel=features['channel']
+                except: channel=""
+                self.text_url.config(text=self.caja_url.get())
+                self.text_title.config(text=title)
+                self.text_duration.config(text=str(int(duration/60))+":"+str(duration%60))
+                self.text_channel.config(text=channel)
+                for f in features['formats']:
+                    #print("\n\n"+str(f))
+                    sublist=[]
+                    format_id=""
+                    try:
+                        format_id=f['format_id']
+                    except: format_id=""
+                    ext=""
+                    try:
+                        ext=f['ext']
+                    except: ext=""
+                    vcodec=""
+                    try:
+                        if f['vcodec']=="none":
+                            vcodec="none"
+                        else:
+                            vcodec="Video"
+                    except: vcodec=""
+                    acodec=""
+                    try:
+                        if f['acodec']=="none":
+                            acodec="none"
+                        else:
+                            acodec="Audio"
+                    except: acodec=""
+                    tbr=""
+                    try:
+                        tbr=str(f['tbr'])+"k"
+                    except: tbr=""
+                    width=""
+                    try:
+                        width=f['width']
+                    except: width=""
+                    height=""
+                    try:
+                        height=f['height']
+                    except: height=""
+                    format_note=""
+                    try:
+                        format_note=f['format_note']
+                    except: format_note=""
+                    fps=""
+                    try:
+                        fps=f['fps']
+                    except: fps=""
+                    filesize=""
+                    try:
+                        filesize=self.formatSize(f['filesize'])
+                    except: filesize=""
+                    sublist.append(format_id)
+                    sublist.append(ext)
+                    sublist.append(vcodec)
+                    sublist.append(acodec)
+                    sublist.append(tbr)
+                    sublist.append(str(width)+"x"+str(height))
+                    sublist.append(format_note)
+                    sublist.append(str(fps)+"fps")
+                    sublist.append(filesize)
+                    self.list_formats.append(sublist)
+        except:
+            self.caja_formats['values']=self.list_formats
+            self.btn_search['state']="normal"
+            self.btn_add['state']="normal"
         self.caja_formats['values']=self.list_formats
         self.btn_search['state']="normal"
         self.btn_add['state']="normal"
